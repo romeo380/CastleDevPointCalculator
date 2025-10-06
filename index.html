@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Castle Dev Point + LOKA Calculator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+body {font-family: 'Orbitron', sans-serif; background: #0a0a1a; color: #fff; margin:0; padding:0; overflow-x:hidden;}
+.navbar {display:flex; justify-content:center; gap:20px; background:#11112a; padding:15px 0; box-shadow:0 0 10px #0ff,0 0 20px #00f; position: sticky; top:0; z-index:10;}
+.nav-item {cursor:pointer; padding:10px 20px; border-radius:10px; color:#0ff; text-shadow:0 0 5px #0ff; transition:0.3s;}
+.nav-item:hover {background: linear-gradient(90deg,#00f,#0ff); box-shadow:0 0 15px #0ff,0 0 30px #00f; color:#fff;}
+.container {max-width:950px; margin:30px auto; padding:20px; background:#0f0f2a; border-radius:15px; box-shadow:0 0 20px rgba(0,255,255,0.3),0 0 30px rgba(128,0,255,0.3); display:none;}
+.container.active { display:block; }
+h2 {text-align:center; color:#0ff; text-shadow:0 0 10px #0ff,0 0 20px #00f;}
+table {margin-top:20px; border-collapse: collapse; width:100%; background:#11112a; border-radius:10px; overflow:hidden;}
+th, td {border:1px solid #222244; padding:8px; text-align:center;}
+th {background:#1a1a3d; color:#0ff; text-shadow:0 0 5px #0ff;}
+input, button {font-family:'Orbitron', sans-serif; padding:8px; border-radius:8px; border:none; outline:none;}
+input {background:#11112a; color:#0ff; box-shadow:0 0 5px rgba(0,255,255,0.5);}
+input:focus {box-shadow:0 0 15px rgba(0,255,255,0.8);}
+button {background:linear-gradient(90deg,#00f,#0ff); color:#fff; font-weight:bold; cursor:pointer; box-shadow:0 0 10px #0ff,0 0 20px #00f;}
+button:hover {box-shadow:0 0 20px #0ff,0 0 40px #00f; transform:translateY(-2px);}
+.live-calc {margin-top:10px; color:#0ff; text-shadow:0 0 5px #0ff;}
+td.land-148728 {color:#00f; text-shadow:0 0 8px #00f,0 0 15px #0ff; font-weight:bold;}
+td.land-143422 {color:#0f0; text-shadow:0 0 8px #0f0,0 0 15px #0ff; font-weight:bold;}
+.error {color:#f00; text-shadow:0 0 5px #f00;}
+#results {animation:float 2s infinite alternate;}
+a.kingdom-link {color:#0ff; cursor:pointer; text-decoration:underline;}
+a.kingdom-link:hover {color:#0f0; text-shadow:0 0 8px #0f0;}
+button.delete-btn {background:#f00; box-shadow:0 0 10px #f00,0 0 20px #a00; margin:0;}
+button.delete-btn:hover {box-shadow:0 0 20px #f00,0 0 40px #a00;}
+
+/* Kingdom click glow */
+@keyframes glowPulse {0% {text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;}50% {text-shadow: 0 0 15px #0ff, 0 0 30px #0ff;}100% {text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;}}
+.kingdom-glow-blue {animation: glowPulse 0.6s ease forwards;}
+.kingdom-glow-green {animation: glowPulse 0.6s ease forwards; text-shadow:0 0 5px #0f0,0 0 15px #0f0;}
+
+/* Castle Name neon glow */
+@keyframes inputGlowPulse {
+    0% {box-shadow: 0 0 5px #0ff;}
+    50% {box-shadow: 0 0 20px #0ff;}
+    100% {box-shadow: 0 0 5px #0ff;}
+}
+.input-glow-blue {animation: inputGlowPulse 0.7s ease forwards; border:1px solid #0ff;}
+.input-glow-green {animation: inputGlowPulse 0.7s ease forwards; border:1px solid #0f0; box-shadow:0 0 20px #0f0;}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div class="navbar">
+    <div class="nav-item active" data-page="castle">🏰 Castle Dev Point</div>
+    <div class="nav-item" data-page="loka">🌍 LOKA Land Calculator</div>
+</div>
+
+<!-- Castle Dev Point Dashboard -->
+<div class="container active" id="castle">
+    <h2>🏰 Castle Dev Point Dashboard</h2>
+    <form id="castleForm" onsubmit="event.preventDefault(); addCastle();">
+        <div>
+            <label>Castle Name:</label>
+            <input type="text" id="castleName" placeholder="Enter Castle Name">
+        </div>
+        <div>
+            <label>Dev Points:</label>
+            <input type="number" id="devPoint" min="0" placeholder="Enter Dev Points" required>
+        </div>
+        <div class="live-calc" id="liveCalc">Crystals: 0 | Earn $: 0.000000</div>
+        <button type="submit">Add Castle</button>
+    </form>
+
+    <table id="castleTable">
+        <tr><th>Castle Name</th><th>Dev Points</th><th>Crystals</th><th>Earn $</th><th>Action</th></tr>
+    </table>
+</div>
+
+<!-- LOKA Land Calculator -->
+<div class="container" id="loka">
+    <h2>🌍 LOKA Land Calculator</h2>
+    <form id="landForm" onsubmit="event.preventDefault(); fetchContribution();">
+        <div class="input-group">
+            <label>Land ID(s):</label>
+            <input type="text" id="landId" placeholder="148728,143422" required>
+        </div>
+        <div class="input-group">
+            <label>Date From:</label>
+            <input type="date" id="from" required>
+            <label>Date To:</label>
+            <input type="date" id="to" required>
+        </div>
+        <button type="submit">🚀 GO / SEARCH</button>
+    </form>
+    <div id="results"></div>
+</div>
+
+<script>
+// Navigation
+const navItems = document.querySelectorAll('.nav-item');
+const pages = document.querySelectorAll('.container');
+navItems.forEach(item=>{
+    item.addEventListener('click',()=>{
+        navItems.forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        pages.forEach(p=>p.classList.remove('active'));
+        document.getElementById(item.dataset.page).classList.add('active');
+    });
+});
+
+// Castle Dev Point Logic
+const CRYSTALS_PER_DEV = 5;
+const USD_PER_DEV = 0.000025;
+
+document.getElementById('devPoint').addEventListener('input', ()=>{
+    const devPoints = parseFloat(document.getElementById('devPoint').value) || 0;
+    const crystals = devPoints * CRYSTALS_PER_DEV;
+    const earnings = devPoints * USD_PER_DEV;
+    document.getElementById('liveCalc').innerText = 
+        `Crystals: ${crystals.toFixed(2)} | Earn $: ${earnings.toFixed(6)}`;
+});
+
+function addCastle(devPointsInput=null, landId=null, element=null, castleNameInput=null){
+    const devPoints = devPointsInput !== null ? devPointsInput : parseFloat(document.getElementById('devPoint').value) || 0;
+    const crystals = devPoints * CRYSTALS_PER_DEV;
+    const earnings = devPoints * USD_PER_DEV;
+    const castleName = castleNameInput || document.getElementById('castleName').value || 'Unknown Castle';
+
+    const table = document.getElementById('castleTable');
+    const row = table.insertRow();
+    row.insertCell(0).innerText = castleName;
+    row.insertCell(1).innerText = devPoints.toFixed(2);
+    row.insertCell(2).innerText = crystals.toFixed(2);
+    row.insertCell(3).innerText = earnings.toFixed(6)+' $';
+
+    const actionCell = row.insertCell(4);
+    const delBtn = document.createElement('button');
+    delBtn.innerText = 'Delete';
+    delBtn.classList.add('delete-btn');
+    delBtn.onclick = ()=>row.remove();
+    actionCell.appendChild(delBtn);
+
+    if(devPointsInput === null){
+        document.getElementById('devPoint').value='';
+        document.getElementById('castleName').value='';
+        document.getElementById('liveCalc').innerText='Crystals: 0 | Earn $: 0.000000';
+    }
+
+    // Glow animation
+    if(element){
+        if(landId=='148728') {
+            element.classList.add('kingdom-glow-blue');
+            document.getElementById('castleName').classList.add('input-glow-blue');
+        }
+        else if(landId=='143422') {
+            element.classList.add('kingdom-glow-green');
+            document.getElementById('castleName').classList.add('input-glow-green');
+        }
+        setTimeout(()=>{
+            element.classList.remove('kingdom-glow-blue','kingdom-glow-green');
+            document.getElementById('castleName').classList.remove('input-glow-blue','input-glow-green');
+        },700);
+    }
+
+    // Switch to Castle dashboard
+    document.querySelector('.nav-item[data-page="castle"]').click();
+}
+
+// LOKA Land Calculator
+window.addEventListener('DOMContentLoaded',()=>{
+    const savedLandIds=localStorage.getItem('loka_landIds');
+    const savedFrom=localStorage.getItem('loka_from');
+    const savedTo=localStorage.getItem('loka_to');
+    if(savedLandIds) document.getElementById('landId').value=savedLandIds;
+    if(savedFrom) document.getElementById('from').value=savedFrom;
+    if(savedTo) document.getElementById('to').value=savedTo;
+});
+
+async function fetchContribution(){
+    let landIds=document.getElementById('landId').value.split(',').map(id=>id.trim()).filter(id=>id.length>0);
+    const from=document.getElementById('from').value;
+    const to=document.getElementById('to').value;
+    const resultsDiv=document.getElementById('results');
+    if(landIds.length===0){resultsDiv.innerHTML='<span class="error">Enter at least one Land ID</span>'; return;}
+    localStorage.setItem('loka_landIds',landIds.join(','));
+    localStorage.setItem('loka_from',from);
+    localStorage.setItem('loka_to',to);
+    resultsDiv.innerHTML="<span style='color:#0ff;'>Loading...</span>";
+    let html='';
+    for(const landId of landIds){
+        const apiUrl=`https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${from}&to=${to}`;
+        try{
+            const response=await fetch(apiUrl);
+            const data=await response.json();
+            if(!data.result){html+=`<p class="error">Land ID ${landId} Error: ${data.err?.code||"Unknown"}</p>`; continue;}
+            html+=`<b>Land ID: ${landId} | Owner:</b> ${data.owner}<br>`;
+            html+="<table><tr><th>Kingdom Name</th><th>Contribution</th><th>Continent</th><th>Kingdom ID</th></tr>";
+            data.contribution.forEach(k=>{
+                let landClass='';
+                if(k.landId=='148728') landClass='land-148728';
+                if(k.landId=='143422') landClass='land-143422';
+                html+=`<tr>
+                    <td><a class="kingdom-link" onclick="addCastle(${k.total}, '${k.landId}', this, '${k.name}')">${k.name}</a></td>
+                    <td class="${landClass}">${k.total}</td>
+                    <td>${k.continent}</td>
+                    <td style="font-size:smaller">${k.kingdomId}</td>
+                </tr>`;
+            });
+            html+="</table><br>";
+        }catch(err){html+=`<p class="error">Land ID ${landId} API Error: ${err}</p>`;}
+    }
+    resultsDiv.innerHTML=html;
+}
+</script>
+</body>
+</html>
